@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kimap GPT - Test Frontend</title>
+    <style>
+        /* CSS per rendere la pagina più carina */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: #f4f7f9;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        #chat-container {
+            width: 90%;
+            max-width: 600px;
+            height: 80vh;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+            padding: 15px;
+            margin: 0;
+            border-bottom: 1px solid #eee;
+        }
+        #chat-window {
+            flex-grow: 1;
+            padding: 20px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+        }
+        .message {
+            padding: 10px 15px;
+            border-radius: 18px;
+            max-width: 75%;
+            line-height: 1.5;
+        }
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .bot-message {
+            background-color: #e9ecef;
+            color: #333;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        .thinking {
+            color: #999;
+            font-style: italic;
+        }
+        #chat-form {
+            display: flex;
+            padding: 15px;
+            border-top: 1px solid #eee;
+        }
+        #message-input {
+            flex-grow: 1;
+            border: 1px solid #ccc;
+            border-radius: 20px;
+            padding: 10px 15px;
+            font-size: 16px;
+        }
+        #message-input:focus {
+            outline: none;
+            border-color: #007bff;
+        }
+        #chat-form button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 44px;
+            height: 44px;
+            margin-left: 10px;
+            font-size: 20px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="chat-container">
+        <h1>Kimap GPT</h1>
+        <div id="chat-window">
+            </div>
+        <form id="chat-form">
+            <input type="text" id="message-input" placeholder="Scrivi la tua domanda..." autocomplete="off">
+            <button type="submit">➤</button>
+        </form>
+    </div>
+
+    <script>
+        // --- LOGICA JAVASCRIPT ---
+
+        // Elementi della pagina che ci servono
+        const chatForm = document.getElementById('chat-form');
+        const messageInput = document.getElementById('message-input');
+        const chatWindow = document.getElementById('chat-window');
+
+        // URL del tuo server backend. Modificalo se il tuo server gira su una porta diversa.
+        const API_URL = 'http://localhost:3000/chat';
+
+        // Qui salviamo l'ID della sessione. Inizia come null.
+        let sessionId = null;
+
+        // Gestione dell'invio del form
+        chatForm.addEventListener('submit', async (event) => {
+            event.preventDefault(); // Impedisce alla pagina di ricaricarsi
+
+            const question = messageInput.value.trim();
+            if (!question) return; // Non inviare messaggi vuoti
+
+            // 1. Mostra il messaggio dell'utente nella chat
+            displayMessage(question, 'user');
+            messageInput.value = ''; // Pulisci l'input
+
+            // 2. Mostra un messaggio di "sto pensando..."
+            const thinkingMessage = displayMessage('Sto pensando...', 'thinking');
+
+            try {
+                // 3. Invia la richiesta al backend
+                const response = await fetch(API_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    // Includi la domanda e l'attuale sessionId (che sarà null la prima volta)
+                    body: JSON.stringify({
+                        question: question,
+                        sessionId: sessionId 
+                    }),
+                });
+
+                if (!response.ok) {
+                    throw new Error('Errore dal server: ' + response.statusText);
+                }
+
+                const data = await response.json();
+
+                // 4. Aggiorna il sessionId con quello ricevuto dal server!
+                // Questo è il passaggio chiave per mantenere la conversazione.
+                sessionId = data.sessionId;
+
+                // 5. Mostra la risposta del bot
+                thinkingMessage.remove(); // Rimuovi il messaggio "sto pensando"
+                displayMessage(data.answer, 'bot');
+
+            } catch (error) {
+                // In caso di errore, mostralo nella chat
+                thinkingMessage.remove();
+                console.error('Errore:', error);
+                displayMessage('Si è verificato un errore. Controlla la console del browser e del server.', 'bot');
+            }
+        });
+
+        // Funzione per creare e aggiungere un messaggio alla finestra della chat
+        function displayMessage(text, type) {
+            const messageElement = document.createElement('div');
+            messageElement.classList.add('message', `${type}-message`);
+            messageElement.textContent = text;
+            chatWindow.appendChild(messageElement);
+
+            // Scorre automaticamente fino in fondo alla chat
+            chatWindow.scrollTop = chatWindow.scrollHeight;
+            return messageElement;
+        }
+
+    </script>
+
+</body>
+</html>
