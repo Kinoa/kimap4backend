@@ -2,7 +2,7 @@ import 'dotenv/config';
 import { VertexAI } from '@google-cloud/vertexai';
 
 const vertex = new VertexAI({
-  projectId: process.env.GOOGLE_CLOUD_PROJECT,   // deve essere definita
+  projectId: process.env.GOOGLE_CLOUD_PROJECT,
   location : 'us-central1'
 });
 
@@ -14,3 +14,5 @@ export const gemini = vertex.getGenerativeModel({
     topP: 0.95
   }
 });
+
+
