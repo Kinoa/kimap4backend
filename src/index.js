@@ -68,5 +68,43 @@ app.post('/chat', async (req, res) => {
   }
 });
 
+app.get('/conversations', async (req, res) => {
+  try {
+    console.log('Recupero di tutte le conversazioni da Firestore...');
+
+    const snapshot = await chatCollection.get();
+
+    if (snapshot.empty) {
+      console.log('Nessuna conversazione trovata.');
+      return res.json([]);
+    }
+
+    // Trasformiamo i dati di Firestore in un formato più pulito per il frontend.
+    const conversations = snapshot.docs.map(doc => {
+      const data = doc.data();
+      return {
+        sessionId: doc.id,
+        // Semplifichiamo l'array 'history' per una più facile visualizzazione.
+        messages: data.history.map(entry => ({
+          role: entry.role,
+          text: entry.parts[0].text,
+        })),
+        // Aggiungiamo un timestamp dell'ultima modifica, se disponibile
+        lastUpdated: doc.updateTime.toDate(),
+      };
+    });
+    
+    // Ordiniamo le conversazioni dalla più recente alla più vecchia
+    conversations.sort((a, b) => b.lastUpdated - a.lastUpdated);
+
+    console.log(`Trovate e formattate ${conversations.length} conversazioni.`);
+    res.json(conversations);
+
+  } catch (err) {
+    console.error("Errore nel recupero delle conversazioni:", err);
+    res.status(500).send('Errore interno del server');
+  }
+});
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => console.log(`Kimap GPT pronto su http://localhost:${PORT}/chat`));

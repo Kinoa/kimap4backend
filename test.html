@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Kimap GPT - Test Frontend</title>
+    <title>Kimap GPT - Chat & Dashboard</title>
     <style>
-        /* CSS per rendere la pagina più carina */
+        /* CSS Generale */
         body {
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             background-color: #f4f7f9;
@@ -15,22 +15,50 @@
             align-items: center;
             height: 100vh;
         }
-        #chat-container {
+
+        /* Contenitore Principale */
+        .main-container {
             width: 90%;
-            max-width: 600px;
-            height: 80vh;
+            max-width: 800px; /* Aumentato per la dashboard */
+            height: 90vh;
             background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.1);
             display: flex;
             flex-direction: column;
+            overflow: hidden;
+        }
+        
+        /* Header */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 1px solid #eee;
+            background-color: #fff;
         }
         h1 {
-            text-align: center;
             color: #333;
-            padding: 15px;
             margin: 0;
-            border-bottom: 1px solid #eee;
+            padding: 20px 0;
+            font-size: 24px;
+        }
+        .view-switcher {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Stili per la CHAT */
+        #chat-container {
+            display: flex; /* Mostrato di default */
+            flex-direction: column;
+            height: 100%;
         }
         #chat-window {
             flex-grow: 1;
@@ -40,147 +68,227 @@
             flex-direction: column;
             gap: 15px;
         }
-        .message {
-            padding: 10px 15px;
-            border-radius: 18px;
-            max-width: 75%;
-            line-height: 1.5;
+        .message { padding: 10px 15px; border-radius: 18px; max-width: 75%; line-height: 1.5; }
+        .user-message { background-color: #007bff; color: white; align-self: flex-end; border-bottom-right-radius: 4px; }
+        .bot-message { background-color: #e9ecef; color: #333; align-self: flex-start; border-bottom-left-radius: 4px; }
+        .thinking { color: #999; font-style: italic; }
+        #chat-form { display: flex; padding: 15px; border-top: 1px solid #eee; }
+        #message-input { flex-grow: 1; border: 1px solid #ccc; border-radius: 20px; padding: 10px 15px; font-size: 16px; }
+        #chat-form button { background-color: #007bff; color: white; border: none; border-radius: 50%; width: 44px; height: 44px; margin-left: 10px; font-size: 20px; cursor: pointer; }
+
+        /* Stili per la DASHBOARD CONVERSAZIONI */
+        #conversations-container {
+            display: none; /* Nascosto di default */
+            padding: 20px;
+            overflow-y: auto;
+            height: 100%;
         }
-        .user-message {
-            background-color: #007bff;
-            color: white;
-            align-self: flex-end;
-            border-bottom-right-radius: 4px;
+        .accordion-item {
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            overflow: hidden;
         }
-        .bot-message {
-            background-color: #e9ecef;
-            color: #333;
-            align-self: flex-start;
-            border-bottom-left-radius: 4px;
-        }
-        .thinking {
-            color: #999;
-            font-style: italic;
-        }
-        #chat-form {
-            display: flex;
+        .accordion-header {
+            background-color: #f7f7f7;
             padding: 15px;
-            border-top: 1px solid #eee;
-        }
-        #message-input {
-            flex-grow: 1;
-            border: 1px solid #ccc;
-            border-radius: 20px;
-            padding: 10px 15px;
-            font-size: 16px;
-        }
-        #message-input:focus {
-            outline: none;
-            border-color: #007bff;
-        }
-        #chat-form button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 44px;
-            height: 44px;
-            margin-left: 10px;
-            font-size: 20px;
             cursor: pointer;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .accordion-header:hover { background-color: #efefef; }
+        .accordion-header span { font-weight: 500; font-size: 14px; color: #555; }
+        .accordion-header .date { font-size: 12px; color: #888; }
+        .accordion-content {
+            padding: 0px 15px;
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease-out, padding 0.3s ease-out;
+            background: #fff;
+        }
+        .accordion-content .message-log {
+            padding: 15px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
         }
     </style>
 </head>
 <body>
 
-    <div id="chat-container">
-        <h1>Kimap GPT</h1>
-        <div id="chat-window">
-            </div>
-        <form id="chat-form">
-            <input type="text" id="message-input" placeholder="Scrivi la tua domanda..." autocomplete="off">
-            <button type="submit">➤</button>
-        </form>
+    <div class="main-container">
+        <div class="header">
+            <h1 id="view-title">Kimap GPT</h1>
+            <button id="view-switcher-btn" class="view-switcher">Vedi Cronologia</button>
+        </div>
+
+        <!-- VISTA CHAT -->
+        <div id="chat-container">
+            <div id="chat-window"></div>
+            <form id="chat-form">
+                <input type="text" id="message-input" placeholder="Scrivi la tua domanda..." autocomplete="off">
+                <button type="submit">➤</button>
+            </form>
+        </div>
+
+        <!-- VISTA CRONOLOGIA CONVERSAZIONI -->
+        <div id="conversations-container">
+            <!-- Il contenuto verrà generato da JavaScript -->
+        </div>
     </div>
 
     <script>
-        // --- LOGICA JAVASCRIPT ---
-
-        // Elementi della pagina che ci servono
+        // --- ELEMENTI DEL DOM ---
+        const chatContainer = document.getElementById('chat-container');
+        const conversationsContainer = document.getElementById('conversations-container');
+        const viewSwitcherBtn = document.getElementById('view-switcher-btn');
+        const viewTitle = document.getElementById('view-title');
+        
         const chatForm = document.getElementById('chat-form');
         const messageInput = document.getElementById('message-input');
         const chatWindow = document.getElementById('chat-window');
 
-        // URL del tuo server backend. Modificalo se il tuo server gira su una porta diversa.
-        //const API_URL = 'http://localhost:3000/chat';
-        const API_URL='https://backendkimap4-712641297040.europe-west8.run.app/chat';
+        // --- URL DEGLI ENDPOINT ---
+        //const API_BASE_URL = 'https://backendkimap4-712641297040.europe-west8.run.app';
+        const API_BASE_URL = 'http://localhost:3000'; // Usa questo per lo sviluppo locale
+        const CHAT_API_URL = `${API_BASE_URL}/chat`;
+        const CONVERSATIONS_API_URL = `${API_BASE_URL}/conversations`;
 
-        // Qui salviamo l'ID della sessione. Inizia come null.
         let sessionId = null;
 
-        // Gestione dell'invio del form
+        // --- LOGICA DI VISUALIZZAZIONE ---
+        function showView(viewName) {
+            if (viewName === 'chat') {
+                chatContainer.style.display = 'flex';
+                conversationsContainer.style.display = 'none';
+                viewTitle.textContent = 'Kimap GPT';
+                viewSwitcherBtn.textContent = 'Vedi Cronologia';
+            } else {
+                chatContainer.style.display = 'none';
+                conversationsContainer.style.display = 'block';
+                viewTitle.textContent = 'Cronologia Chat';
+                viewSwitcherBtn.textContent = 'Torna alla Chat';
+                loadConversations();
+            }
+        }
+
+        viewSwitcherBtn.addEventListener('click', () => {
+            const isChatVisible = chatContainer.style.display === 'flex';
+            showView(isChatVisible ? 'conversations' : 'chat');
+        });
+
+
+        // --- LOGICA DELLA DASHBOARD CRONOLOGIA ---
+        async function loadConversations() {
+            conversationsContainer.innerHTML = '<p class="thinking">Caricamento cronologia...</p>';
+            try {
+                const response = await fetch(CONVERSATIONS_API_URL);
+                if (!response.ok) throw new Error('Errore nel caricamento della cronologia.');
+                
+                const conversations = await response.json();
+                conversationsContainer.innerHTML = ''; // Pulisci
+
+                if (conversations.length === 0) {
+                    conversationsContainer.innerHTML = '<p>Nessuna conversazione trovata.</p>';
+                    return;
+                }
+
+                conversations.forEach(convo => {
+                    const item = document.createElement('div');
+                    item.className = 'accordion-item';
+                    
+                    const header = document.createElement('div');
+                    header.className = 'accordion-header';
+                    header.innerHTML = `
+                        <span>Sessione: ${convo.sessionId.substring(0, 8)}...</span>
+                        <span class="date">${new Date(convo.lastUpdated).toLocaleString('it-IT')}</span>
+                    `;
+                    
+                    const content = document.createElement('div');
+                    content.className = 'accordion-content';
+                    const messageLog = document.createElement('div');
+                    messageLog.className = 'message-log';
+
+                    convo.messages.forEach(msg => {
+                        // Non mostrare i messaggi di tipo 'function' che sono interni.
+                        if (msg.role !== 'function') {
+                            const msgElement = document.createElement('div');
+                            msgElement.className = `message ${msg.role === 'user' ? 'user-message' : 'bot-message'}`;
+                            msgElement.textContent = msg.text;
+                            messageLog.appendChild(msgElement);
+                        }
+                    });
+                    
+                    content.appendChild(messageLog);
+                    item.appendChild(header);
+                    item.appendChild(content);
+                    conversationsContainer.appendChild(item);
+
+                    // Aggiungi l'evento per la fisarmonica
+                    header.addEventListener('click', () => {
+                        const isActive = item.classList.toggle('active');
+                        if (isActive) {
+                            content.style.maxHeight = content.scrollHeight + 30 + 'px';
+                            content.style.padding = '0 15px';
+                        } else {
+                            content.style.maxHeight = '0';
+                            content.style.padding = '0 15px';
+                        }
+                    });
+                });
+
+            } catch (error) {
+                console.error(error);
+                conversationsContainer.innerHTML = '<p>Impossibile caricare la cronologia.</p>';
+            }
+        }
+
+        // --- LOGICA DELLA CHAT ---
         chatForm.addEventListener('submit', async (event) => {
-            event.preventDefault(); // Impedisce alla pagina di ricaricarsi
-
+            event.preventDefault();
             const question = messageInput.value.trim();
-            if (!question) return; // Non inviare messaggi vuoti
+            if (!question) return;
 
-            // 1. Mostra il messaggio dell'utente nella chat
             displayMessage(question, 'user');
-            messageInput.value = ''; // Pulisci l'input
+            messageInput.value = '';
 
-            // 2. Mostra un messaggio di "sto pensando..."
             const thinkingMessage = displayMessage('Sto pensando...', 'thinking');
 
             try {
-                // 3. Invia la richiesta al backend
-                const response = await fetch(API_URL, {
+                const response = await fetch(CHAT_API_URL, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    // Includi la domanda e l'attuale sessionId (che sarà null la prima volta)
-                    body: JSON.stringify({
-                        question: question,
-                        sessionId: sessionId 
-                    }),
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ question: question, sessionId: sessionId }),
                 });
 
-                if (!response.ok) {
-                    throw new Error('Errore dal server: ' + response.statusText);
-                }
+                if (!response.ok) throw new Error('Errore dal server: ' + response.statusText);
 
                 const data = await response.json();
-
-                // 4. Aggiorna il sessionId con quello ricevuto dal server!
-                // Questo è il passaggio chiave per mantenere la conversazione.
                 sessionId = data.sessionId;
 
-                // 5. Mostra la risposta del bot
-                thinkingMessage.remove(); // Rimuovi il messaggio "sto pensando"
+                thinkingMessage.remove();
                 displayMessage(data.answer, 'bot');
 
             } catch (error) {
-                // In caso di errore, mostralo nella chat
                 thinkingMessage.remove();
                 console.error('Errore:', error);
                 displayMessage('Si è verificato un errore. Controlla la console del browser e del server.', 'bot');
             }
         });
 
-        // Funzione per creare e aggiungere un messaggio alla finestra della chat
         function displayMessage(text, type) {
             const messageElement = document.createElement('div');
             messageElement.classList.add('message', `${type}-message`);
             messageElement.textContent = text;
             chatWindow.appendChild(messageElement);
-
-            // Scorre automaticamente fino in fondo alla chat
             chatWindow.scrollTop = chatWindow.scrollHeight;
             return messageElement;
         }
 
-    </script>
+        // --- Inizializzazione ---
+        showView('chat'); // Mostra la chat all'avvio
 
+    </script>
 </body>
 </html>
