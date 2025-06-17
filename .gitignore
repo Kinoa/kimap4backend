@@ -116,3 +116,5 @@ dist
 .pnp.*
 
 kimap4-firebase-adminsdk-fbsvc-772bfd6ca3.json
+
+.DS_Store
